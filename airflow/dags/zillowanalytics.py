@@ -6,6 +6,7 @@ from airflow import DAG
 from datetime import timedelta, datetime
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash_operator import BashOperator
+from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 
 
 
@@ -25,6 +26,9 @@ with open(config_file_path, 'r') as config_file:
 now = datetime.now()
 dt_now_string = now.strftime("%d%m%Y%H%M%S")
 
+
+s3_bucket = 'for-cleaned-data-bucket'
+
 def extract_zillow_data(**kwargs):
     url = kwargs['url']
     headers = kwargs['headers']
@@ -41,8 +45,6 @@ def extract_zillow_data(**kwargs):
         json.dump(response_data, output_file, indent = 4)
     output_list = [output_file_path, file_str]
     return output_list
-
-
 
 
 default_args = {
@@ -77,5 +79,15 @@ with DAG('zillow_analitics_dag',
             bash_command = 'aws s3 mv {{ ti.xcom_pull("task_extract_zillow_data_var")[0]}} s3://landing-rapidapiairflowlambda/',
         )
 
+        check_file_in_s3bucket = S3KeySensor(
+             task_id = 'task_check_file_in_s3bucket',
+             bucket_key = '{{ti.xcom_pull("task_extract_zillow_data_var")[1]}}',
+             bucket_name = s3_bucket,
+             aws_conn_id = 'aws_s3_conn', # піключення створене через CLI, в Airflow Connections відображена лише назва
+             wildcard_match = False,
+             timeout = 120,
+             poke_interval = 5
 
-        extract_zillow_data_var >> load_to_s3
+        )
+
+        extract_zillow_data_var >> load_to_s3 >> chek_file_in_s3bucket
