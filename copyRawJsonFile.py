@@ -5,7 +5,6 @@ s3_client = boto3.client('s3')
 
 
 def lambda_handler(event, context):
-    # TODO implement
     source_bucket = event['Records'][0]['s3']['bucket']['name']
     object_key = event['Records'][0]['s3']['object']['key']
     # print(source_bucket)

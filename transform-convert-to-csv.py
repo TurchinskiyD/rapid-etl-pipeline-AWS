@@ -44,7 +44,6 @@ def lambda_handler(event, context):
     object_key = f"{target_file_name}.csv"
     s3_client.put_object(Bucket=bucket_name, Key=object_key, Body=csv_data)
 
-    # TODO implement
     return {
         'statusCode': 200,
         'body': json.dumps('Hello from Lambda!')
