@@ -11,35 +11,26 @@ def lambda_handler(event, context):
 
     target_bucket = 'for-cleaned-data-bucket'
     target_file_name = object_key[:-5]
-    print(target_file_name)
 
     waiter = s3_client.get_waiter('object_exists')
     waiter.wait(Bucket=source_bucket, Key=object_key)
 
     response = s3_client.get_object(Bucket=source_bucket, Key=object_key)
-    print(response)
 
-    data = response['Body']
-    print(data)
     data = response['Body'].read().decode('utf-8')
-    print(data)
     data = json.loads(data)
-    print(data)
     data_list = []
     for d in data['results']:
         data_list.append(d)
     df = pd.DataFrame(data_list)
 
-    # Select specific columns
-    selected_columns = ['bathrooms', 'bedrooms', 'city', 'homeStatus',
-                        'homeType', 'livingArea', 'price', 'zestimate', 'zipcode']
-    df = df[selected_columns]
-    print(df)
 
-    # Convert DataFrame to CSV format
+    selected_columns = ['zipcode', 'city', 'homeType', 'homeStatus', 'livingArea',
+                    'bathrooms', 'bedrooms', 'price', 'zestimate']
+    df = df[selected_columns]
+
     csv_data = df.to_csv(index=False)
 
-    # Upload CSV to S3
     bucket_name = target_bucket
     object_key = f"{target_file_name}.csv"
     s3_client.put_object(Bucket=bucket_name, Key=object_key, Body=csv_data)

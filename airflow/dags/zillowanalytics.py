@@ -7,6 +7,7 @@ from datetime import timedelta, datetime
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
+from airflow.providers.amazon.aws.transfers.s3_to_redshift import S3ToRedshiftOperator
 
 
 
@@ -83,11 +84,21 @@ with DAG('zillow_analitics_dag',
              task_id = 'task_check_file_in_s3bucket',
              bucket_key = '{{ti.xcom_pull("task_extract_zillow_data_var")[1]}}',
              bucket_name = s3_bucket,
-             aws_conn_id = 'aws_s3_conn', # піключення створене через CLI, в Airflow Connections відображена лише назва
+             aws_conn_id = 'aws_s3_conn', # підключення створене через CLI, в Airflow Connections відображена лише назва
              wildcard_match = False,
              timeout = 120,
              poke_interval = 5
-
         )
 
-        extract_zillow_data_var >> load_to_s3 >> chek_file_in_s3bucket
+        transfer_s3_to_redshift = S3ToRedshiftOperator(
+            task_id='task_transfer_s3_to_redshift',
+            aws_conn_id='aws_s3_conn',
+            redshift_conn_id='conn_id_redshift',
+            s3_bucket=s3_bucket,
+            s3_key='{{ti.xcom_pull("task_extract_zillow_data_var")[1]}}',
+            schema="PUBLIC",
+            table='zillow_data_table',
+            copy_options=['csv IGNOREHEADER 1'],
+        )
+
+        extract_zillow_data_var >> load_to_s3 >> chek_file_in_s3bucket >> transfer_s3_to_redshift
