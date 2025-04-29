@@ -9,7 +9,7 @@ def lambda_handler(event, context):
     source_bucket = event['Records'][0]['s3']['bucket']['name']
     object_key = event['Records'][0]['s3']['object']['key']
 
-    target_bucket = 'for-cleaned-data-bucket'
+    target_bucket = 'for-rapid-cleaned-data-bucket'
     target_file_name = object_key[:-5]
 
     waiter = s3_client.get_waiter('object_exists')

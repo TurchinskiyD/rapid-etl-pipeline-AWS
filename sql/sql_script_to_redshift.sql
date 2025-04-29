@@ -1,3 +1,4 @@
+-- виконуємо скрипт в Redshift db dev після створення
 
 CREATE TABLE IF NOT EXISTS zillow_data_table(
 zipcode INT,

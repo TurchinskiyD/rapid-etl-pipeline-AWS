@@ -28,7 +28,8 @@ now = datetime.now()
 dt_now_string = now.strftime("%d%m%Y%H%M%S")
 
 
-s3_bucket = 'for-cleaned-data-bucket'
+s3_bucket = 'for-rapid-cleaned-data-bucket'
+
 
 def extract_zillow_data(**kwargs):
     url = kwargs['url']
@@ -39,7 +40,7 @@ def extract_zillow_data(**kwargs):
     response = requests.get(url, headers=headers, params = querystring)
     response_data = response.json()
 
-    output_file_path = f'/home/ubuntu/response_data_{data_string}.json'
+    output_file_path = f'/home/ubuntu/data/response_data_{data_string}.json'
     file_str = f'response_data_{data_string}.csv'
 
     with open(output_file_path, 'w') as output_file:
@@ -60,9 +61,9 @@ default_args = {
 }
 
 
-with DAG('zillow_analitics_dag',
+with DAG('zillow_analytics_dag',
         default_args = default_args,
-        schedule_interval = '@daily',
+        schedule = '@daily',
         catchup = False) as dag:
 
         extract_zillow_data_var = PythonOperator(
@@ -77,14 +78,14 @@ with DAG('zillow_analitics_dag',
 
         load_to_s3 = BashOperator(
             task_id = 'task_load_to_s3',
-            bash_command = 'aws s3 mv {{ ti.xcom_pull("task_extract_zillow_data_var")[0]}} s3://landing-rapidapiairflowlambda/',
+            bash_command = 'aws s3 mv {{ ti.xcom_pull("task_extract_zillow_data_var")[0]}} s3://for-rapid-etl-pipelin-backet/',
         )
 
         check_file_in_s3bucket = S3KeySensor(
              task_id = 'task_check_file_in_s3bucket',
              bucket_key = '{{ti.xcom_pull("task_extract_zillow_data_var")[1]}}',
              bucket_name = s3_bucket,
-             aws_conn_id = 'aws_s3_conn', # підключення створене через CLI, в Airflow Connections відображена лише назва
+             aws_conn_id = 'aws_s3_conn',
              wildcard_match = False,
              timeout = 120,
              poke_interval = 5
